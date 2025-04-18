@@ -134,7 +134,6 @@ func (r *RedisWriter) Write(ctx context.Context, session GameSession) error {
 		return err
 	}
 
-	// Get updated score
 	score, err := r.client.ZScore(ctx, leaderboardKey, playerKey).Result()
 	if err != nil {
 		log.Printf("[Redis] Error getting updated score: %v", err)
@@ -275,7 +274,6 @@ func main() {
 		log.Fatalf("failed to setup %s: %v", *mode, err)
 	}
 
-	// Create context that listens for the interrupt signal from the OS.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 

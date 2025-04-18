@@ -34,11 +34,14 @@ type KafkaMessage struct {
 }
 
 var (
-	jwtSecret        = []byte("secret-test")
-	kafkaWriter      *kafka.Writer
-	
+	jwtSecret   = []byte("secret-test")
+	kafkaWriter *kafka.Writer
+
 	// Channel for sending messages to Kafka
 	kafkaMessageChan chan KafkaMessage
+
+	// Idempotency store for preventing duplicate requests
+	nonceStore *middleware.NonceStore
 
 	// Prometheus metrics
 	httpRequestsTotal = promauto.NewCounterVec(
@@ -82,11 +85,9 @@ var (
 	)
 )
 
-// startKafkaWorker initializes a background worker that consumes messages from the channel
-// and publishes them to Kafka with retries and metrics
 func startKafkaWorker(ctx context.Context) {
 	log.Println("Starting Kafka background worker")
-	
+
 	go func() {
 		for {
 			select {
@@ -96,30 +97,30 @@ func startKafkaWorker(ctx context.Context) {
 			case msg := <-kafkaMessageChan:
 				// Start timing Kafka write
 				kafkaTimer := prometheus.NewTimer(kafkaWriteDuration)
-				
+
 				// Try to publish with retries
 				var writeErr error
 				for retries := 0; retries < 3; retries++ {
 					// Create a timeout context for this specific write
 					writeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-					
+
 					writeErr = kafkaWriter.WriteMessages(writeCtx, kafka.Message{
 						Key:   msg.Key,
 						Value: msg.Value,
 					})
-					
+
 					cancel() // Always cancel the context to release resources
-					
+
 					if writeErr == nil {
 						break
 					}
-					
+
 					log.Printf("retry %d: Failed to write to Kafka: %v", retries+1, writeErr)
 					time.Sleep(time.Second * time.Duration(retries+1))
 				}
-				
+
 				kafkaTimer.ObserveDuration() // Stop the timer
-				
+
 				if writeErr != nil {
 					log.Printf("failed to write to Kafka after retries: %v", writeErr)
 					kafkaWriteErrors.Inc()
@@ -132,12 +133,14 @@ func startKafkaWorker(ctx context.Context) {
 func setUpApplication() {
 	// Initialize Kafka message channel with buffer
 	kafkaMessageChan = make(chan KafkaMessage, 100)
-	
+
 	// Initialize Kafka writer
 	kafkaWriter = kafka.NewWriter(kafka.WriterConfig{
 		Brokers: []string{"localhost:9092"},
 		Topic:   "game-sessions",
 	})
+
+	nonceStore = middleware.NewNonceStore(15 * time.Minute)
 }
 
 func prometheusMiddleware(next http.Handler) http.Handler {
@@ -145,19 +148,14 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 		endpoint := r.URL.Path
 		method := r.Method
 
-		// Create a custom response writer to capture the status code
 		ww := middleware.NewResponseWriter(w)
 
-		// Start the timer
 		timer := prometheus.NewTimer(httpRequestDuration.WithLabelValues(method, endpoint))
 
-		// Call the next handler
 		next.ServeHTTP(ww, r)
 
-		// Stop the timer
 		timer.ObserveDuration()
 
-		// Record the request
 		status := fmt.Sprintf("%d", ww.Status())
 		httpRequestsTotal.WithLabelValues(method, endpoint, status).Inc()
 	})
@@ -166,26 +164,24 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 func main() {
 	setUpApplication()
 	defer kafkaWriter.Close()
-	
+
 	// Create a context that will be canceled when the application shuts down
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
-	// Start the Kafka background worker
+
 	startKafkaWorker(ctx)
 
 	rateLimiter := middleware.NewRateLimiter()
-	//requestValidator := middleware.NewRequestValidationMiddleware()
 
 	metricsRouter := http.NewServeMux()
 	metricsRouter.Handle("/metrics", promhttp.Handler())
 
-	// Create the main API router with all middleware
 	apiRouter := mux.NewRouter()
 	apiRouter.Use(prometheusMiddleware)
+	apiRouter.Use(corsMiddleware)
 	apiRouter.Use(authMiddleware)
 	apiRouter.Use(rateLimiter.RateLimitMiddleware)
-	//apiRouter.Use(requestValidator.ValidateRequestMiddleware)
+	apiRouter.Use(nonceStore.IdempotencyMiddleware)
 
 	apiRouter.Use(securityHeadersMiddleware)
 	apiRouter.HandleFunc("/v1/score", createScoreHandler).Methods("POST")
@@ -256,6 +252,24 @@ func securityHeadersMiddleware(next http.Handler) http.Handler {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("X-XSS-Protection", "1; mode=block")
+		next.ServeHTTP(w, r)
+	})
+}
+
+func corsMiddleware(next http.Handler) http.Handler {
+
+	// in prod we should use this only for allowed origins
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type")
+
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 }

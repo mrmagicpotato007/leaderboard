@@ -104,3 +104,4 @@ kafka logs:
 worker commands:
 go run main.go -mode cassandra
 go run main.go -mode redis
+

@@ -53,75 +53,73 @@ func (rl *RateLimiter) RateLimitMiddleware(next http.Handler) http.Handler {
 	})
 }
 
-type RequestValidationMiddleware struct {
-	nonceStore map[string]time.Time
+type NonceStore struct {
+	nonces     map[string]time.Time
 	mu         sync.RWMutex
+	expiration time.Duration
 }
 
-func NewRequestValidationMiddleware() *RequestValidationMiddleware {
-	return &RequestValidationMiddleware{
-		nonceStore: make(map[string]time.Time),
+func NewNonceStore(expiration time.Duration) *NonceStore {
+	ns := &NonceStore{
+		nonces:     make(map[string]time.Time),
+		expiration: expiration,
+	}
+
+	go ns.startCleanupRoutine()
+
+	return ns
+}
+
+func (ns *NonceStore) startCleanupRoutine() {
+	ticker := time.NewTicker(ns.expiration / 2)
+	defer ticker.Stop()
+
+	for range ticker.C {
+		ns.cleanup()
 	}
 }
 
-//to-do need to validate
-func (rv *RequestValidationMiddleware) cleanupNonces() {
-	rv.mu.Lock()
-	defer rv.mu.Unlock()
+func (ns *NonceStore) cleanup() {
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
 
-	threshold := time.Now().Add(-5 * time.Minute)
-	for nonce, timestamp := range rv.nonceStore {
-		if timestamp.Before(threshold) {
-			delete(rv.nonceStore, nonce)
+	now := time.Now()
+	for nonce, expiry := range ns.nonces {
+		if now.After(expiry) {
+			delete(ns.nonces, nonce)
 		}
 	}
 }
 
-func (rv *RequestValidationMiddleware) isNonceValid(nonce string) bool {
-	rv.mu.Lock()
-	defer rv.mu.Unlock()
-
-	if _, exists := rv.nonceStore[nonce]; exists {
+func (ns *NonceStore) IsValid(nonce string) bool {
+	if nonce == "" {
 		return false
 	}
 
-	rv.nonceStore[nonce] = time.Now()
+	ns.mu.Lock()
+	defer ns.mu.Unlock()
+
+	if _, exists := ns.nonces[nonce]; exists {
+		return false
+	}
+
+	ns.nonces[nonce] = time.Now().Add(ns.expiration)
 	return true
 }
 
-// nounncing related
-// func (rv *RequestValidationMiddleware) ValidateRequestMiddleware(next http.Handler) http.Handler {
-// 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-// 		nonce := r.Header.Get("X-Request-Nonce")
-// 		timestamp := r.Header.Get("X-Request-Timestamp")
-// 		signature := r.Header.Get("X-Request-Signature")
+func (ns *NonceStore) IdempotencyMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nonce := r.Header.Get("X-Request-ID")
+		if nonce == "" {
+			http.Error(w, "Missing request ID", http.StatusBadRequest)
+			return
+		}
 
-// 		if nonce == "" || timestamp == "" || signature == "" {
-// 			http.Error(w, "Missing request validation headers", http.StatusBadRequest)
-// 			return
-// 		}
+		if !ns.IsValid(nonce) {
+			http.Error(w, "Duplicate request", http.StatusConflict)
+			return
+		}
 
-// 		reqTime, err := time.Parse(time.RFC3339, timestamp)
-// 		if err != nil || time.Since(reqTime) > 5*time.Minute {
-// 			http.Error(w, "Invalid or expired request timestamp", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		if !rv.isNonceValid(nonce) {
-// 			http.Error(w, "Invalid or reused nonce", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		if !validateRequestSignature(r, signature) {
-// 			http.Error(w, "Invalid request signature", http.StatusBadRequest)
-// 			return
-// 		}
-
-// 		next.ServeHTTP(w, r)
-// 	})
-// }
-
-func validateRequestSignature(r *http.Request, signature string) bool {
-	// to-do Implement HMAC validation using a shared secret
-	return true
+		next.ServeHTTP(w, r)
+	})
 }

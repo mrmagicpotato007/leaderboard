@@ -96,3 +96,22 @@ Security: Helps prevent SQL injection by separating the query structure from the
 Performance: If you're executing the same query multiple times with different values, the database can reuse the query plan
 Efficiency: The database only needs to parse and analyze the query once
 
+whaats cors?
+When your frontend (e.g., React app on localhost:4000) tries to make a request to a different origin (e.g., API on localhost:8086), the browser first checks if it's allowed.
+For simple requests, the browser adds an Origin header to the request.
+The server must respond with appropriate Access-Control-Allow-* headers to permit the request.
+For more complex requests (like those with custom headers or methods other than GET/POST), the browser first sends a "preflight" OPTIONS request to check if the actual request is permitted.
+
+Rate Limiting:
+
+Restricts the frequency of requests (e.g., 10 requests per minute)
+Prevents overwhelming the system with too many requests
+Helps against brute force attacks and DoS attempts
+Does not prevent the same request from being processed multiple times if sent within allowed limits
+
+Idempotency:
+
+Ensures a specific request is processed exactly once
+Prevents duplicate transactions regardless of time between requests
+Critical for financial or scoring operations where duplicates cause data integrity issues
+Works across longer time periods (minutes/hours) than typical rate limiting windows

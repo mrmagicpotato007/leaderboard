@@ -59,6 +59,23 @@ type LeaderboardEntry struct {
 	Rank     int64   `json:"rank"`
 }
 
+func corsMiddleware(next http.Handler) http.Handler {
+    return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+        w.Header().Set("Access-Control-Allow-Origin", "*")
+        w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+        w.Header().Set("Access-Control-Allow-Headers", "Authorization, Content-Type, Accept")
+        w.Header().Set("Access-Control-Max-Age", "3600")
+        
+        // Handle preflight requests
+        if r.Method == "OPTIONS" {
+            w.WriteHeader(http.StatusOK)
+            return
+        }
+        
+        next.ServeHTTP(w, r)
+    })
+}
+
 func getTopHandler(w http.ResponseWriter, r *http.Request) {
 
 	//hardcoded mode for now can be extended to support other modes from query params.
@@ -182,12 +199,13 @@ func main() {
 	setupApplication()
 	// Setup HTTP routes
 	r := mux.NewRouter()
-
+	
+	r.Use(corsMiddleware)
+	
 	// Protected routes
 	protected := r.PathPrefix("/v1").Subrouter()
 	protected.Use(authMiddleware)
-
-	// Add protected routes
+	// No need to apply CORS again to protected routes
 	protected.HandleFunc("/leaderboard/top", getTopHandler).Methods("GET")
 	protected.HandleFunc("/rank/{userId}", getUserRankHandler).Methods("GET")
 
