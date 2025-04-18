@@ -1,0 +1,106 @@
+commands:
+
+curl -X POST http://localhost:8084/v1/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "testpass123"
+  }'
+
+status code: returns code 201 if success, if there's a conflict we would send 409
+same user name : return 409 conflict
+
+
+curl -X POST http://localhost:8084/v1/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "password": "testpass123"
+  }'
+
+
+table creation commands :
+
+considering each as are seperate tables with out any relationships.
+CREATE TABLE IF NOT EXISTS users (
+			id SERIAL PRIMARY KEY,
+			username VARCHAR(255) UNIQUE NOT NULL,
+			password VARCHAR(255) NOT NULL,
+			join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)
+
+
+
+docker exec -i cassandra cqlsh << EOF
+
+CREATE KEYSPACE IF NOT EXISTS game_system 
+WITH replication = {
+  'class': 'SimpleStrategy',
+  'replication_factor': 1
+};
+
+USE game_system;
+
+CREATE TABLE IF NOT EXISTS game_sessions (
+    session_id timeuuid,
+    user_id text,
+    score int,
+    game_mode text,
+    timestamp timestamp,
+    client_ip text,
+    PRIMARY KEY ((user_id), timestamp, session_id)
+) WITH CLUSTERING ORDER BY (timestamp DESC, session_id DESC);
+
+
+
+    
+
+docker commands:
+docker run --name pg-container -e POSTGRES_PASSWORD=mysecretpassword -p 5432:5432 -d postgres
+docker exec -it pg-container psql -U postgres
+
+
+docker run --name cassandra -d -p 9042:9042 -p 7000:7000 cassandra:latest
+
+1. To enter the CQL shell: docker exec -it cassandra cqlsh
+2. The instance is also accessible from your host machine at localhost:9042
+3. Default ports are properly mapped (7000 for cluster communication, 9042 for client connections)
+
+
+docker rm -f kafka && docker run -d \
+    --name kafka \
+    --hostname kafka \
+    -p 9092:9092 \
+    -e ALLOW_PLAINTEXT_LISTENER=yes \
+    -e KAFKA_CFG_NODE_ID=1 \
+    -e KAFKA_CFG_PROCESS_ROLES=broker,controller \
+    -e KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER \
+    -e KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093 \
+    -e KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://localhost:9092 \
+    -e KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT \
+    -e KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093 \
+    bitnami/kafka:latest
+
+
+•  Create a topic: docker exec -it kafka kafka-topics.sh --create --topic game-sessions --bootstrap-server localhost:9092 --partitions 1 --replication-factor 1
+•  List topics: docker exec -it kafka kafka-topics.sh --list --bootstrap-server localhost:9092
+•  Publish messages: docker exec -it kafka kafka-console-producer.sh --topic TOPIC_NAME --bootstrap-server localhost:9092
+•  Consume messages: docker exec -it kafka kafka-console-consumer.sh --topic TOPIC_NAME --from-beginning --bootstrap-server localhost:9092
+
+docker exec -it kafka kafka-console-consumer.sh --topic game-sessions --from-beginning --bootstrap-server localhost:9092
+docker network create game-network
+docker network connect game-network kafka
+
+kafka logs:
+{"event_type":"game_score_recorded","session":{"session_id":"7f96b996-1c31-11f0-a02a-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:45:36.804495Z","client_ip":"[::1]:54289"}}
+{"event_type":"game_score_recorded","session":{"session_id":"8c4e4eba-1c31-11f0-a02b-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:45:58.140281Z","client_ip":"[::1]:54289"}}
+{"event_type":"game_score_recorded","session":{"session_id":"90c79802-1c31-11f0-a02c-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:46:05.646029Z","client_ip":"[::1]:54289"}}
+{"event_type":"game_score_recorded","session":{"session_id":"94ac29ce-1c31-11f0-a02d-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:46:12.177147Z","client_ip":"[::1]:54289"}}
+{"event_type":"game_score_recorded","session":{"session_id":"acd95058-1c31-11f0-ae4e-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:46:52.738364Z","client_ip":"[::1]:57472"}}
+{"event_type":"game_score_recorded","session":{"session_id":"ae79631c-1c31-11f0-ae4f-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:46:55.465142Z","client_ip":"[::1]:57472"}}
+{"event_type":"game_score_recorded","session":{"session_id":"afdeb78e-1c31-11f0-ae50-2a50f1ea084a","user_id":"1","score":100,"game_mode":"classic","timestamp":"2025-04-18T08:46:57.806939Z","client_ip":"[::1]:57472"}}
+
+
+worker commands:
+go run main.go -mode cassandra
+go run main.go -mode redis

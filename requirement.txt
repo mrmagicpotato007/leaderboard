@@ -1,0 +1,98 @@
+//ranking strategy should be modified we can accordingly fetch data.
+
+//why i didnt go ahead with having single db cluster when ever there's an updation of game session we had to calculate all the ranks for every insertion
+//writes to leaderboard will contend for locks.
+//rank calculation becomes slow for every insert.
+//performance degrades with number of users.
+
+second approach is:
+bottle neck is ranking, calaculation for huge number of the users, to solve this we can run rank updation periodically and perform rank calculation based on all game sessions but during this recalcualtion 
+and updating, some user requests may slow down.
+
+
+third approach is seperating services to acheive  scalable solution
+
+// entities
+user
+gamesession
+leaderboard
+
+user service
+handle all user related apis which includes create new user and stuff and handles the user table/ can explore kv store for every user id
+// can be used to authenticate 
+// signup
+// login <- jwt
+//db choice : postGres with replicas and indexes to handle load as the load wont be too high going ahead with posgres, we can introduce caching if the scale is too high
+
+score service
+//we need to authenticate every request using jwt
+//handle all game session related info and pushes data to kafka
+// or instead of directly writing on the fly of every request we can asynchronously handle the writes by having a queue in between and consumer group on the other end
+// this approach wouldn't overwhelm our data store incase of high load.
+// and we need to store it in db, instead of using posgres going ahead with cassandra , which is capable of handling millions of writes per sec.
+// posgres can be tuned to handle number of inserts using partitioning and batch inserts but it will not be the best solution.
+//Cassandra does not offer transaction support or any notion of ACID gurantees.
+// cons with cassandra is that we may need to handle the consistency of the data data races can occur if the requests from same user comes at same time which would be very rare in our case.
+
+
+//partition kafka based on used id to distribute the load.
+
+cassandra woker service :
+takes messages from kafka 
+redis worker service:
+takes messages from kafka and performs the following operations 
+Redis sets
+    O(log N) inserts
+
+    O(log N) rank lookup
+
+    O(1) top-K (ZREVRANGE)
+
+    Easy to expire or archive
+
+//ZADD total_score_leaderboard <score> <user_id>
+//ZADD recent_score_leaderboard <timestamp_score_weighted> <user_id>
+//ZADD win_rate_leaderboard <win_rate> <user_id>
+
+
+ranking service
+//we need to authenticate every request using jwt
+// assumimg game session event of a user wont be coming too frequently 
+// lets run a worker pool to periodically fetch data from kafka, worker pools each worker pool will get existing data for user add the score compare it top 10 redis heap/sorted and update it accordingly we dont need 
+to be concerned about scaling our redis cluster 
+// we can use redis sorted sets to get top 10 scores or maintain a heap of size 10? 
+// what should we do if overlap happens
+
+
+
+// if number of users increase how do we handle our redis cluster 
+
+
+/multiple leaderboards based on top scores / recent performance / win/loss ratio can be queryable by using api ? is this even good approach
+
+
+
+// need to read more about security measures
+// jwt token generation in go
+//to know about nouncing 
+// read about nouncing 
+
+references used:
+https://www.calhoun.io/connecting-to-a-postgresql-database-with-gos-database-sql-package/
+https://redis.io/solutions/leaderboards/
+https://redis.io/learn/howtos/leaderboard
+
+The RETURNING id, timestamp part tells PostgreSQL to return these values from the row it just inserted.
+These returned values are temporarily held in the database result set, which is then:
+Retrieved by stmt.QueryRow()
+Captured into our Go variables using .Scan(&session.ID, &session.Timestamp)
+
+- so when we execute query row we are executing both insert and read queries 
+tx.Prepare(insertQuery) - This tells PostgreSQL to parse and plan the query execution, but doesn't execute it yet. It's like creating a reusable template.
+stmt.QueryRow() - This is where the actual execution happens with the specific values.
+The benefits of using prepared statements are:
+
+Security: Helps prevent SQL injection by separating the query structure from the values
+Performance: If you're executing the same query multiple times with different values, the database can reuse the query plan
+Efficiency: The database only needs to parse and analyze the query once
+

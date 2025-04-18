@@ -1,0 +1,36 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'score-service'
+    static_configs:
+      - targets: ['host.docker.internal:8085']
+
+  - job_name: 'ranking-service'
+    static_configs:
+      - targets: ['host.docker.internal:8086']
+
+  - job_name: 'worker-service-redis'
+    static_configs:
+      - targets: ['host.docker.internal:2112']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: mode
+        replacement: 'redis'
+      
+  - job_name: 'worker-service-cassandra'
+    static_configs:
+      - targets: ['host.docker.internal:2113']
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: mode
+        replacement: 'cassandra'
+
+  - job_name: 'users-service'
+    static_configs:
+      - targets: ['host.docker.internal:8084']

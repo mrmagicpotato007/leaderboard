@@ -1,0 +1,3 @@
+ranking_service/main.go:16:2: no required module provides package github.com/golang-jwt/jwt/v5: go.mod file not found in current directory or any parent directory; see 'go help modules'
+ranking_service/main.go:17:2: no required module provides package github.com/gorilla/mux: go.mod file not found in current directory or any parent directory; see 'go help modules'
+ranking_service/main.go:18:2: no required module provides package github.com/redis/go-redis/v9: go.mod file not found in current directory or any parent directory; see 'go help modules'

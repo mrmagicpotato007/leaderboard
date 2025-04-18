@@ -1,0 +1,79 @@
+// package handlers
+
+// import (
+//     "leaderboard/db"
+//     "leaderboard/models"
+//     "net/http"
+//     "strconv"
+
+//     "github.com/gin-gonic/gin"
+// )
+
+// func SubmitScore(c *gin.Context) {
+//     var body struct {
+//         UserID uint `json:"user_id"`
+//         Score  int  `json:"score"`
+//     }
+//     if err := c.BindJSON(&body); err != nil {
+//         c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+//         return
+//     }
+
+//     // 1. Insert score into game_sessions
+//     db.DB.Exec(`INSERT INTO game_sessions(user_id, score, game_mode) VALUES (?, ?, 'default')`, body.UserID, body.Score)
+
+//     // 2. Update leaderboard
+//     db.DB.Exec(`
+//         INSERT INTO leaderboard(user_id, total_score)
+//         VALUES (?, ?)
+//         ON CONFLICT(user_id)
+//         DO UPDATE SET total_score = leaderboard.total_score + EXCLUDED.total_score
+//     `, body.UserID, body.Score)
+
+//     c.JSON(http.StatusOK, gin.H{"status": "score submitted"})
+// }
+
+// func GetLeaderboard(c *gin.Context) {
+//     var results []models.Leaderboard
+//     db.DB.Raw(`SELECT * FROM leaderboard ORDER BY total_score DESC LIMIT 10`).Scan(&results)
+//     c.JSON(http.StatusOK, results)
+// }
+
+// func GetRank(c *gin.Context) {
+//     userID, _ := strconv.Atoi(c.Param("user_id"))
+//     var rank int
+//     db.DB.Raw(`
+//         SELECT COUNT(*) + 1 FROM leaderboard
+//         WHERE total_score > (SELECT total_score FROM leaderboard WHERE user_id = ?)
+//     `, userID).Scan(&rank)
+
+//     c.JSON(http.StatusOK, gin.H{"user_id": userID, "rank": rank})
+// }
+
+// CREATE OR REPLACE FUNCTION update_leaderboard()
+// RETURNS TRIGGER AS $$
+// BEGIN
+//   -- Check if the user already exists in the leaderboard
+//   IF EXISTS (SELECT 1 FROM leaderboard WHERE user_id = NEW.user_id) THEN
+//     -- Update the total score for the existing user
+//     UPDATE leaderboard
+//     SET total_score = total_score + NEW.score
+//     WHERE user_id = NEW.user_id;
+//   ELSE
+//     -- Insert a new entry for the user in the leaderboard
+//     INSERT INTO leaderboard (user_id, total_score)
+//     VALUES (NEW.user_id, NEW.score);
+//   END IF;
+
+//   -- Recalculate the rank for all users in the leaderboard
+//   UPDATE leaderboard
+//   SET rank = sub.rank
+//   FROM (
+//     SELECT user_id, RANK() OVER (ORDER BY total_score DESC) as rank
+//     FROM leaderboard
+//   ) as sub
+//   WHERE leaderboard.user_id = sub.user_id;
+
+//   RETURN NEW;
+// END;
+// $$ LANGUAGE plpgsql;
