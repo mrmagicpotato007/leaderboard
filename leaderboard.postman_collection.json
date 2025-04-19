@@ -1,0 +1,248 @@
+{
+	"info": {
+		"_postman_id": "86f72a48-afc4-4974-95e2-a5e68ce2d422",
+		"name": "leaderboard",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "23444864"
+	},
+	"item": [
+		{
+			"name": "New Request",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "signup",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"testpass123\"\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8084/v1/signup",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8084",
+					"path": [
+						"v1",
+						"signup"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:8084/v1/signup \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"username\": \"testuser\",\n    \"password\": \"testpass123\"\n  }'"
+			},
+			"response": []
+		},
+		{
+			"name": "login",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"username\": \"testuser\",\n    \"password\": \"testpass123\"\n  }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8084/v1/login",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8084",
+					"path": [
+						"v1",
+						"login"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:8084/v1/login \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"username\": \"testuser\",\n    \"password\": \"testpass123\"\n  }'"
+			},
+			"response": []
+		},
+		{
+			"name": "update score",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"score\": 100,\n    \"game_mode\": \"classic\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8085/v1/score",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8085",
+					"path": [
+						"v1",
+						"score"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:8085/v1/score \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk\" \\\n-H \"Content-Type: application/json\" \\\n-d '{\n    \"score\": 100,\n    \"game_mode\": \"classic\"\n}'"
+			},
+			"response": []
+		},
+		{
+			"name": "top10",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"score\": 100,\n    \"game_mode\": \"classic\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8085/v1/score",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8085",
+					"path": [
+						"v1",
+						"score"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:8085/v1/score \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk\" \\\n-H \"Content-Type: application/json\" \\\n-d '{\n    \"score\": 100,\n    \"game_mode\": \"classic\"\n}'"
+			},
+			"response": []
+		},
+		{
+			"name": "individualrank",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"score\": 100,\n    \"game_mode\": \"classic\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8085/v1/score",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8085",
+					"path": [
+						"v1",
+						"score"
+					]
+				},
+				"description": "Generated from cURL: curl -X POST http://localhost:8085/v1/score \\\n-H \"Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk\" \\\n-H \"Content-Type: application/json\" \\\n-d '{\n    \"score\": 100,\n    \"game_mode\": \"classic\"\n}'"
+			},
+			"response": []
+		},
+		{
+			"name": "http://localhost:8085/v1/score",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Authorization",
+						"value": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk"
+					},
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					},
+					{
+						"key": "X-Request-ID",
+						"value": "score-submission-123456"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"score\": 50,\n    \"game_mode\": \"classic\"\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8085/v1/score",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8085",
+					"path": [
+						"v1",
+						"score"
+					]
+				},
+				"description": "Generated from cURL: curl --location 'http://localhost:8085/v1/score' \\\n--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NDUwMzgxMDIsInVzZXJfaWQiOjEsInVzZXJuYW1lIjoidGVzdHVzZXIifQ.G9hCFICVDBKjkoI4IRxtJ4UsjcKludVFbvD7oTDjtPk' \\\n--header 'Content-Type: application/json' \\\n--header 'X-Request-ID: score-submission-123456' \\\n--data '{\n    \"score\": 50,\n    \"game_mode\": \"classic\"\n}'"
+			},
+			"response": []
+		}
+	]
+}
